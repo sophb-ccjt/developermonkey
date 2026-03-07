@@ -247,7 +247,7 @@ async function runFromGreasyfork(input) {
 
     if (url.endsWith(".user.js")) {
 
-        const res = await fetch(url);
+        const res = await fetch(url, { mode: 'cors' });
         if (!res.ok) throw new Error("Failed to fetch script");
 
         const text = await res.text();
@@ -267,7 +267,7 @@ async function runFromGreasyfork(input) {
 
     const scriptURL = new URL(m[1], url).href;
 
-    const res = await fetch(scriptURL);
+    const res = await fetch(scriptURL, { mode: 'cors' });
     if (!res.ok)
         throw new Error("Failed to fetch script");
 

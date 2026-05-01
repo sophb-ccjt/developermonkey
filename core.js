@@ -1,5 +1,5 @@
 const Developermonkey = {
-    version: '1.0.0',
+    version: '1.1.0',
     runtime: 'DevTools',
     name: 'Developermonkey',
     build: '2026.03.07-19:43'

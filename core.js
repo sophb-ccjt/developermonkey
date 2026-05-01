@@ -37,7 +37,7 @@ const DMRuntime = (() => {
 
             if (key === 'include') { includes.push(value); return; }
             if (key === 'exclude') { excludes.push(value); return; }
-            if (key === 'match')   { matches.push(value); return; }
+            if (key === 'match') { matches.push(value); return; }
 
             header[key] = value;
         });
@@ -101,7 +101,6 @@ const DMRuntime = (() => {
     /* ---------- pattern matching ---------- */
 
     function patternToRegex(pattern) {
-
         let regex = pattern
             .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
             .replace(/\*/g, '.*');
@@ -113,8 +112,26 @@ const DMRuntime = (() => {
         return patternToRegex(pattern).test(url);
     }
 
-    function shouldRun(info) {
+    // handle regex @include
+    function regexStringToArgs(string) {
+        const regexRegex = /\/(.*)\/([gmisxuUDAJ]*)/;
+        const exec = regexRegex.exec(string);
+        return {
+            source: exec?.[1] ?? null,
+            flags: exec?.[2] ?? null
+        }
+    }
 
+    function isValidRegex(pattern, flags = '') {
+        try {
+            new RegExp(pattern, flags);
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function shouldRun(info) {
         const url = location.href;
         const meta = info.script;
 
@@ -125,7 +142,9 @@ const DMRuntime = (() => {
 
         if (meta.includes.length) {
             const ok = meta.includes.some(p => matchesPattern(url, p));
-            if (!ok) return false;
+            const regex = regexStringToArgs(meta.includes);
+            const regexOk = isValidRegex(regex.source, regex.flags);
+            if (!ok && !regexOk) return false;
         }
 
         if (meta.excludes.length) {
@@ -146,7 +165,6 @@ const DMRuntime = (() => {
 })();
 
 function parseScript(script) {
-
     const grants = Object.freeze(DMRuntime.parseGrants(script));
     const info = Object.freeze(DMRuntime.parseHeaderInfo(script));
 
@@ -157,7 +175,6 @@ function parseScript(script) {
 }
 
 async function runScript(script) {
-
     let src;
     let scriptFunc;
 
@@ -236,7 +253,6 @@ async function runScript(script) {
 }
 
 async function runFromGreasyfork(input) {
-
     let url;
 
     if (typeof input === "number") {

@@ -1,5 +1,5 @@
 const Developermonkey = {
-    version: '1.1.0',
+    version: '1.2.0',
     runtime: 'DevTools',
     name: 'Developermonkey',
     build: '2026.03.07-19:43'
@@ -8,7 +8,6 @@ const Developermonkey = {
 /*  ======== Core runtime (should be initialized once) ======== */
 
 const DMRuntime = (() => {
-
     /* ---------- header parsing ---------- */
 
     function extractHeader(src) {
@@ -19,7 +18,6 @@ const DMRuntime = (() => {
     }
 
     function parseHeaderInfo(src) {
-
         const header = {};
         const includes = [];
         const excludes = [];
@@ -28,7 +26,6 @@ const DMRuntime = (() => {
         const headerRegex = /\s*\/\/\s*@(\S+)\s+(.+)/;
 
         extractHeader(src).split('\n').forEach(line => {
-
             const m = headerRegex.exec(line);
             if (!m) return;
 
@@ -56,7 +53,6 @@ const DMRuntime = (() => {
     }
 
     function parseGrants(src) {
-
         const grants = new Set();
         const regex = /^\s*\/\/\s*@grant\s+(\S+)/gm;
 
@@ -73,7 +69,6 @@ const DMRuntime = (() => {
     /* ---------- storage ---------- */
 
     function createStorage(info) {
-
         const scriptName = info.script.name || "unknown";
         const namespace = info.script.namespace || "";
         const prefix = `Developermonkey:${namespace}:${scriptName}:`;
@@ -149,7 +144,9 @@ const DMRuntime = (() => {
 
         if (meta.excludes.length) {
             const excluded = meta.excludes.some(p => matchesPattern(url, p));
-            if (excluded) return false;
+            const regex = regexStringToArgs(meta.excludes);
+            const regexExcluded = isValidRegex(regex.source, regex.flags);
+            if (excluded || regexExcluded) return false;
         }
 
         return true;
@@ -197,7 +194,6 @@ async function runScript(script) {
     const GM = {};
 
     const storage = (() => {
-
         const scriptName = parsed.info.script.name || "unknown";
         const namespace = parsed.info.script.namespace || "";
         const prefix = `Developermonkey:${namespace}:${scriptName}:`;
@@ -216,7 +212,6 @@ async function runScript(script) {
         }
 
         return { GM_getValue, GM_setValue, GM_deleteValue };
-
     })();
 
     const grantFuncs = {
@@ -225,7 +220,6 @@ async function runScript(script) {
     };
 
     for (const grant of parsed.grants) {
-
         if (!(grant in grantFuncs)) continue;
 
         GM[grant.replace(/^GM_/, '')] = grantFuncs[grant];
@@ -239,7 +233,6 @@ async function runScript(script) {
     try {
         await scriptFunc();
     } finally {
-
         if (prevGM === undefined)
             delete globalThis.GM;
         else
@@ -255,14 +248,13 @@ async function runScript(script) {
 async function runFromGreasyfork(input) {
     let url;
 
-    if (typeof input === "number") {
+    if (typeof input === "number" || !isNaN(parseInt(input))) {
         url = `https://greasyfork.org/scripts/${input}`;
     } else {
         url = input;
     }
 
     if (url.endsWith(".user.js")) {
-
         const res = await fetch(url, { mode: 'cors' });
         if (!res.ok) throw new Error("Failed to fetch script");
 

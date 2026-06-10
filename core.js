@@ -1,5 +1,5 @@
 const Developermonkey = {
-    version: '1.2.0',
+    version: '1.3.0',
     runtime: 'DevTools',
     name: 'Developermonkey',
     build: '2026.03.07-19:43'
@@ -22,6 +22,7 @@ const DMRuntime = (() => {
         const includes = [];
         const excludes = [];
         const matches = [];
+        const requires = [];
 
         const headerRegex = /\s*\/\/\s*@(\S+)\s+(.+)/;
 
@@ -35,6 +36,7 @@ const DMRuntime = (() => {
             if (key === 'include') { includes.push(value); return; }
             if (key === 'exclude') { excludes.push(value); return; }
             if (key === 'match') { matches.push(value); return; }
+            if (key === 'require') { requires.push(value); return; }
 
             header[key] = value;
         });
@@ -42,6 +44,7 @@ const DMRuntime = (() => {
         header.includes = includes;
         header.excludes = excludes;
         header.matches = matches;
+        header.requires = requires;
 
         return {
             script: header,
@@ -96,7 +99,7 @@ const DMRuntime = (() => {
     /* ---------- pattern matching ---------- */
 
     function patternToRegex(pattern) {
-        let regex = pattern
+        const regex = pattern
             .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
             .replace(/\*/g, '.*');
 
@@ -121,7 +124,7 @@ const DMRuntime = (() => {
         try {
             new RegExp(pattern, flags);
             return true;
-        } catch (e) {
+        } catch {
             return false;
         }
     }
@@ -164,9 +167,11 @@ const DMRuntime = (() => {
 function parseScript(script) {
     const grants = Object.freeze(DMRuntime.parseGrants(script));
     const info = Object.freeze(DMRuntime.parseHeaderInfo(script));
+    const requires = info.script.requires;
 
     return {
         grants,
+        requires,
         info
     };
 }
@@ -230,7 +235,19 @@ async function runScript(script) {
 
     globalThis.GM = Object.freeze({ ...GM });
 
+    async function* fetchRequires() {
+        for (const requiry of parsed.requires) {
+            const requiryURL = new URL(requiry);
+            requiryURL.searchParams.set('nocache', Math.random());
+            const response = await fetch(requiryURL.href);
+            yield response.text();
+        }
+    }
+
     try {
+        for await (const requiryCode of fetchRequires()) {
+            scriptFunc = new Function(requiryCode + script);
+        }
         await scriptFunc();
     } finally {
         if (prevGM === undefined)
